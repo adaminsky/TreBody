@@ -1,16 +1,15 @@
-use std::io;
+use rand::{thread_rng, Rng};
+use std::io::{Read, Error, stdout};
 use tui::{
     Terminal,
     backend::TermionBackend,
     style::{Color, Modifier, Style},
     symbols,
-    widgets::{Chart, Borders, Block, Dataset, Axis},
+    widgets::{Chart, Block, Dataset, Axis},
 };
 use termion::{
-    event::Event::Key,
-    input::MouseTerminal,
     raw::IntoRawMode,
-    screen::AlternateScreen,
+    async_stdin,
 };
 
 const G: f64 = 6.674*0.00000000001;
@@ -107,59 +106,106 @@ fn point_add() {
     assert_eq!(sum.z, 2.0);
 }
 
-fn main() -> Result<(), io::Error> {
+fn main() -> Result<(), Error> {
     // initialize the terminal
-    let stdout = io::stdout().into_raw_mode().unwrap();
+    let stdout = stdout().into_raw_mode().unwrap();
     let backend = TermionBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
+    let mut stdin = async_stdin().bytes();
+    let mut rng = thread_rng();
+    let base = 10.0f64;
 
     let mut b1 = Body {
-        loc: Point { x: 20.0, y: 0.0, z: -33.0 },
-        vel: Point::build_zero(),
+        loc: Point {
+            x: 0.0,
+            y: 350.0 * base.powi(10),
+            z: 0.0
+        },
+        vel: Point {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0 
+        },
         acc: Point::build_zero(),
-        mass: 1.0,
+        mass: 1.0 * base.powi(30),
     };
     let mut b2 = Body {
-        loc: Point { x: -20.0, y: 0.0, z: 15.0 },
-        vel: Point::build_zero(),
+        loc: Point {
+            x: 350.0 * base.powi(10),
+            y: 100.0 * base.powi(10),
+            z: 0.0
+        },
+        vel: Point {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0
+        },
         acc: Point::build_zero(),
-        mass: 1.0,
+        mass: 1.0 * base.powi(30),
     };
     let mut b3 = Body {
-        loc: Point { x: 0.0, y: 20.0, z: 0.0 },
-        vel: Point::build_zero(),
+        loc: Point {
+            x: -350.0 * base.powi(10),
+            y: 200.0 * base.powi(10),
+            z: 0.0
+        },
+        vel: Point {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0
+        },
         acc: Point::build_zero(),
-        mass: 1.0,
+        mass: 1.0 * base.powi(30),
     };
 
+    terminal.clear();
     loop {
-        for i in 0..1000 {
+        let b = stdin.next();
+        if let Some(Ok(b'q')) = b {
+            break;
+        }
+
+        for _ in 0..10000 {
             b1.update_acc(&b2, &b3);
             b2.update_acc(&b3, &b1);
             b3.update_acc(&b1, &b2);
-            b1.step(100.0);
-            b2.step(100.0);
-            b3.step(100.0);
+            b1.step(500.0);
+            b2.step(500.0);
+            b3.step(500.0);
         }
-        let bodys = vec![(b1.loc.x, b1.loc.y),
-                         (b2.loc.x, b2.loc.y),
-                         (b3.loc.x, b3.loc.y)];
 
-        let snapshot = Dataset::default()
-            .name("test")
+        let body1 = vec![(b1.loc.x, b1.loc.y)];
+        let body2 = vec![(b2.loc.x, b2.loc.y)];
+        let body3 = vec![(b3.loc.x, b3.loc.y)];
+
+        let snapshot1 = Dataset::default()
+            .name("Body 1")
+            .style(Style::default().fg(Color::White))
             .marker(symbols::Marker::Dot)
-            .data(&bodys);
+            .data(&body1);
+        let snapshot2 = Dataset::default()
+            .name("Body 2")
+            .style(Style::default().fg(Color::Green))
+            .marker(symbols::Marker::Dot)
+            .data(&body2);
+        let snapshot3 = Dataset::default()
+            .name("Body 3")
+            .style(Style::default().fg(Color::Red))
+            .marker(symbols::Marker::Dot)
+            .data(&body3);
 
-        let datasets = vec![snapshot];
+        let datasets = vec![snapshot1, snapshot2, snapshot3];
 
         terminal.draw(|f| {
             let size = f.size();
             let chart = Chart::new(datasets)
                 .block(Block::default().title("TreBody"))
                 .x_axis(Axis::default()
-                        .bounds([-50.0, 50.0]))
+                        .style(Style::default().fg(Color::White))
+                        .bounds([-150.0 * base.powi(11), 150.0 * base.powi(11)]))
                 .y_axis(Axis::default()
-                        .bounds([-50.0, 50.0]));
+                        .style(Style::default().fg(Color::White))
+                        .bounds([-150.0 * base.powi(11), 150.0 * base.powi(11)]));
             f.render_widget(chart, size);
         });
     }
