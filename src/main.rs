@@ -202,10 +202,10 @@ fn main() -> Result<(), Error> {
                 .block(Block::default().title("TreBody"))
                 .x_axis(Axis::default()
                         .style(Style::default().fg(Color::White))
-                        .bounds([-150.0 * base.powi(11), 150.0 * base.powi(11)]))
+                        .bounds([-50.0 * base.powi(11), 50.0 * base.powi(11)]))
                 .y_axis(Axis::default()
                         .style(Style::default().fg(Color::White))
-                        .bounds([-150.0 * base.powi(11), 150.0 * base.powi(11)]));
+                        .bounds([-50.0 * base.powi(11), 50.0 * base.powi(11)]));
             f.render_widget(chart, size);
         });
     }
